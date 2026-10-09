@@ -113,8 +113,8 @@
       margin-bottom: 1.35rem;
     }
     body.home .term-log {
-      height: 14.5rem;
-      max-height: 14.5rem;
+      height: 18.25rem;
+      max-height: 18.25rem;
     }
     .term-log p { white-space: pre-wrap; }
     .term-line input:focus { outline: none; caret-color: transparent; }
@@ -294,7 +294,7 @@
         white-space: nowrap;
         font-size: clamp(2.05rem, 11vw, 2.85rem);
       }
-      body.home .term-log { height: 12rem; max-height: 12rem; }
+      body.home .term-log { height: 13.5rem; max-height: 13.5rem; }
       .writeup {
         grid-template-columns: 1fr;
         row-gap: 0.45rem;
@@ -328,9 +328,34 @@
       </div>
 
       <div class="den-term" data-term>
-        <div class="term-log" data-term-log>
-          <p><span class="p">phantonite@garage</span>:<span class="w">~</span>$</p>
-          <p>type <span class="term-hl">help</span></p>
+        <div class="term-chrome" aria-hidden="true">
+          <span class="term-dots"><i></i><i></i><i></i></span>
+          <span class="term-chrome-title">phantonite@garage · pts/0</span>
+          <span class="term-chrome-clock" data-term-clock>00:00:00 -03</span>
+          <span class="term-chrome-tag">PUBLIC</span>
+        </div>
+        <div class="term-body">
+          <div class="term-log" data-term-log></div>
+          <aside class="term-hud" data-term-hud aria-label="session status">
+            <div class="hud-block">
+              <span class="hud-k">track</span>
+              <span class="hud-v" data-hud-track>eJPT</span>
+            </div>
+            <div class="hud-block">
+              <span class="hud-k">evidence</span>
+              <span class="hud-v" data-hud-evidence>1</span>
+            </div>
+            <div class="hud-block">
+              <span class="hud-k">process</span>
+              <span class="hud-v" data-hud-proc>bitmite</span>
+              <span class="hud-s" data-hud-state>dormant</span>
+            </div>
+          </aside>
+        </div>
+        <div class="term-chips" data-term-chips>
+          <button type="button" data-chip="whoami">whoami</button>
+          <button type="button" data-chip="writeups">writeups</button>
+          <button type="button" data-chip="tamago run">tamago run</button>
         </div>
         <form class="term-line" data-term-form autocomplete="off">
           <label class="term-prompt" for="den-cmd">
