@@ -281,11 +281,15 @@
     });
   }
 
+  function focusInput() {
+    input.focus({ preventScroll: true });
+    syncCaret();
+  }
+
   function maybeFocus() {
     const a = document.activeElement;
     if (a === document.body || a === document.documentElement || a === input || !a) {
-      input.focus();
-      syncCaret();
+      focusInput();
     }
   }
 
@@ -325,6 +329,10 @@
     storeSet(BOOT_KEY, "1");
     setBusy(false);
     maybeFocus();
+    if (!location.hash) {
+      window.scrollTo(0, 0);
+      requestAnimationFrame(() => window.scrollTo(0, 0));
+    }
     armIdleHint();
     renderHud();
   }
@@ -790,14 +798,12 @@
     if (btn) {
       if (booting) return;
       exec(btn.getAttribute("data-chip") || "");
-      input.focus();
-      syncCaret();
+      focusInput();
       return;
     }
     if (e.target.closest("a, input")) return;
     if (window.getSelection && String(window.getSelection())) return;
-    input.focus();
-    syncCaret();
+    focusInput();
   });
 
   tickClock();
