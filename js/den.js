@@ -23,7 +23,7 @@
   const LINKS = P.links || {};
   const WRITEUPS = P.writeups || [];
   const HANDLE_B64 = "cGhhbnRvbml0ZQ==";
-  const BOOT_KEY = "garage.boot.v1";
+  const BOOT_KEY = "garage.boot.v2";
   const HINT_KEY = "garage.hint.v1";
   const SCANNERS = new Set([
     "nmap", "masscan", "msfconsole", "msf", "burp", "burpsuite",
@@ -34,6 +34,7 @@
   let histIdx = -1;
   let booting = false;
   let interacted = false;
+  let idleTamago = false;
 
   function reducedMotion() {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -174,8 +175,8 @@
     }
     const s = bitmitePeek();
     if (!s || !s.discovered) {
-      hudState.textContent = "dormant";
-      hudState.className = "hud-s";
+      hudState.textContent = idleTamago ? "dormant · tamago" : "dormant";
+      hudState.className = idleTamago ? "hud-s is-live" : "hud-s";
       return;
     }
     if (s.dead) {
@@ -207,7 +208,7 @@
   function setBusy(on) {
     booting = on;
     input.disabled = on;
-    chipsEl?.querySelectorAll("button").forEach((b) => {
+    termEl?.querySelectorAll("[data-chip]").forEach((b) => {
       b.disabled = on;
     });
   }
@@ -219,15 +220,64 @@
     setTimeout(() => el.classList.remove("is-glitch"), 220);
   }
 
-  function printMotd() {
-    const last = WRITEUPS[0];
-    panel({
-      title: "garage · public node",
-      rows: [
-        ["operator", `${P.name || "Lucas Cedro"} / ${HANDLE}`],
-        ["focus", P.focus || ""],
-        ["last", last ? `writeup  ${slugOf(last, 0)}` : "no write-ups yet"],
-      ],
+  function el(tag, cls, text) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function printMotd(animated) {
+    const box = el("div", "term-motd" + (animated && !reducedMotion() ? " is-in" : ""));
+
+    const head = el("div", "term-motd-h");
+    head.append(el("span", "term-motd-host", HOST), el("span", "term-motd-tag", "public node"));
+    box.appendChild(head);
+
+    box.appendChild(el("p", "term-motd-name", P.name || "Lucas Cedro Temponi"));
+    box.appendChild(el("p", "term-motd-role", `${HANDLE}  ·  ${P.roleShort || "pentest in training"}`));
+
+    const track = [P.cert, P.focus].filter(Boolean).join("  ·  ");
+    if (track) box.appendChild(el("p", "term-motd-meta", track));
+    if (P.from) box.appendChild(el("p", "term-motd-from", P.from));
+
+    const ev = el("div", "term-motd-ev");
+    ev.appendChild(el("div", "term-motd-ev-k", "evidence"));
+    const v = el("div", "term-motd-ev-v");
+    const latest = WRITEUPS[0];
+    if (!latest) {
+      v.appendChild(el("p", "term-motd-ev-src", "none published yet"));
+    } else {
+      const slug = slugOf(latest, 0);
+      const n = WRITEUPS.length;
+      v.appendChild(el("p", "term-motd-ev-count", n === 1 ? "1 write-up on record" : `${n} write-ups on record`));
+      v.appendChild(el("p", "term-motd-ev-id", slug));
+      if (latest.title) v.appendChild(el("p", "term-motd-ev-title", latest.title));
+      const src = [latest.platform, latest.tools].filter(Boolean).join(" · ");
+      if (src) v.appendChild(el("p", "term-motd-ev-src", src));
+      const run = el("button", "term-inline-cmd", `open ${slug}`);
+      run.type = "button";
+      run.setAttribute("data-chip", `open ${slug}`);
+      v.appendChild(run);
+    }
+    ev.appendChild(v);
+    box.appendChild(ev);
+    addNode(box);
+  }
+
+  function renderChips() {
+    if (!chipsEl) return;
+    chipsEl.innerHTML = "";
+    const items = [
+      ["whoami", "whoami"],
+      ["writeups", "writeups"],
+      ["tamago run", "tamago run"],
+    ];
+    items.forEach(([cmd, label]) => {
+      const b = el("button", "", label);
+      b.type = "button";
+      b.setAttribute("data-chip", cmd);
+      chipsEl.appendChild(b);
     });
   }
 
@@ -244,40 +294,32 @@
     setTimeout(() => {
       if (interacted) return;
       if (storeGet(HINT_KEY) === "1") return;
-      plain("// the interesting process is tamago", "term-ice");
+      const s = bitmitePeek();
+      if (s?.discovered) return;
+      idleTamago = true;
+      renderHud();
       storeSet(HINT_KEY, "1");
     }, 8000);
   }
 
   async function playBoot() {
     const replay = storeGet(BOOT_KEY) === "1" || reducedMotion();
-    setBusy(true);
     logEl.innerHTML = "";
-    if (!replay) glitchName();
-
-    const n = WRITEUPS.length;
-    const lines = [
-      "bring-up   garage · public",
-      "tty        pts/0",
-      "modules    den",
-      `index      ${n} write-up${n === 1 ? "" : "s"}`,
-    ];
+    renderChips();
+    setBusy(true);
 
     if (replay) {
-      lines.forEach((t) => plain(t, "term-boot"));
-      printMotd();
-      plain(`echo ${HANDLE_B64} | base64 -d`, "term-dim");
-      plain("session ready · whoami · writeups · tamago", "term-ice");
+      printMotd(false);
+      plain("type help for more", "term-ice");
     } else {
-      for (const t of lines) {
-        plain(t, "term-boot");
-        await sleep(85);
-      }
-      await sleep(110);
-      printMotd();
-      plain(`echo ${HANDLE_B64} | base64 -d`, "term-dim");
-      await sleep(70);
-      await typeLine("session ready · whoami · writeups · tamago", "term-ice");
+      glitchName();
+      termEl?.classList.add("is-connecting");
+      await sleep(280);
+      printMotd(true);
+      setBusy(true);
+      await sleep(260);
+      plain("type help for more", "term-ice");
+      termEl?.classList.remove("is-connecting");
     }
 
     storeSet(BOOT_KEY, "1");
@@ -744,16 +786,16 @@
   });
 
   termEl?.addEventListener("click", (e) => {
-    if (e.target.closest("button, a, input")) return;
-    if (window.getSelection && String(window.getSelection())) return;
-    input.focus();
-    syncCaret();
-  });
-
-  chipsEl?.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-chip]");
-    if (!btn || booting) return;
-    exec(btn.getAttribute("data-chip") || "");
+    if (btn) {
+      if (booting) return;
+      exec(btn.getAttribute("data-chip") || "");
+      input.focus();
+      syncCaret();
+      return;
+    }
+    if (e.target.closest("a, input")) return;
+    if (window.getSelection && String(window.getSelection())) return;
     input.focus();
     syncCaret();
   });
